@@ -155,6 +155,8 @@ h3 a:hover{
   content:"- "
 }
 .kategorie{
+  display: block;
+  text-decoration: none;
   color: #424242;
   margin: 1%;
   margin-left: 4%;
@@ -163,13 +165,15 @@ h3 a:hover{
   margin-right: 3%;
   font-size: 16pt;
   border-bottom: solid 2pt #424242;
+  cursor: pointer;
 }
+
 .kategorie a{
   color: #424242;
   text-decoration: none;
 }
 
-e{
+.right {
   font-size: 14pt;
   color: #42a7f4;
   position: absolute;

@@ -82,9 +82,20 @@
     }
 
     const db = new sqlite3.Database('./Listen.db', (err) => {
-      db.get('SELECT * FROM Listen ORDER BY RANDOM() LIMIT 1', (err, _list) => {
+      let query = ''
+      let cat = require('electron').remote.getGlobal('sharedObject').cat
+
+      if (cat == 'random') {
+        query = 'SELECT * FROM Listen ORDER BY RANDOM() LIMIT 1'
+      } else {
+        query = `SELECT * FROM Listen, Sub_List WHERE Listen.ID = Sub_List.ID AND Sub_List.Subjekt = "${cat}" ORDER BY RANDOM() LIMIT 1`
+        require('electron').remote.getGlobal('sharedObject').cat = 'random'
+      }
+
+      db.get(query, (err, _list) => {
         $('#title').html(_list.display_name)
         $('#notes').html(_list.notes)
+
         db.all(`SELECT * FROM Elemente WHERE ID = ${_list.ID}`, (err, elements) => {
           $('#rest').html("Es befinden sich noch " + (elements.length) + " Elemente auf der Liste.")
           let obj = {
@@ -141,7 +152,7 @@
 
     const check = () => {
       let input = $('#text-in').val().toLowerCase().split(' ').join('')
-      if (input == '') {return}
+      if (input == '') { return }
       $('#text-in').val('')
       if (predicate(input, list.items) == 1) {
         let hit = list.items[lockout[lockout.length - 1]]
