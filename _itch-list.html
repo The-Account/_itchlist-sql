@@ -1,385 +1,388 @@
 <html>
-    <head>
-      <title>_itch-List</title>
-      <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
-      <meta charset="utf-8">
-      <link rel="stylesheet" href="style.css">
-      <script
-            src="https://code.jquery.com/jquery-3.3.1.min.js"
-            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-            crossorigin="anonymous"></script>
-    </head>
-    <body>
-        <a href="index.html" style="text-decoration: none;"><h1 id="name">-List </h1></a>
-        <p id="untertitel">Created by Marlon Zewen & Moritz Reinhold</p>
-        <div id="main">
-          <div id="most">
-            <div style="width: 80%">
-              <h2 id="title"></h2>
-              <h3 id="note"></h3>
-              <h3 id="rest"></h3>
-              <div id="liste"></div>
-              <div id="main-container">
-                <input type="text" id="text-in">
-                <div class="out" id="text-out"></div>
-                <button onclick="check()">Prüfen</button>
-                <button onclick="giveup()">Aufgeben</button>
-              </div>
-            </div>
-            <div id=players>
-              <ul id="player-list">
-              </ul>
-            </div>
-          </div>
+
+<head>
+  <title>_itch-List</title>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+    integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+  <a href="index.html" style="text-decoration: none;">
+    <h1 id="name">-List </h1>
+  </a>
+  <p id="untertitel">Created by Marlon Zewen & Moritz Reinhold</p>
+  <div id="main">
+    <div id="most">
+      <div style="width: 80%">
+        <h2 id="title"></h2>
+        <h3 id="note"></h3>
+        <h3 id="rest"></h3>
+        <div id="liste"></div>
+        <div id="main-container">
+          <input type="text" id="text-in">
+          <div class="out" id="text-out"></div>
+          <button onclick="check()">Prüfen</button>
+          <button onclick="giveup()">Aufgeben</button>
+        </div>
       </div>
-        <script>
-            window.$ = require('./jquery.js')
-            const renderer = require('./renderer.js')
-            const mysql = require('mysql')
+      <div id=players>
+        <ul id="player-list">
+        </ul>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.$ = require('./jquery.js')
+    const renderer = require('./renderer.js')
+    const sqlite3 = require('sqlite3')
 
-            $('#name').html(["Witch-List", "Rich-List", "Ritch's-List", "Which-List", "Mitch's-List"][Math.floor(Math.random()*5)])
+    $('#name').html(["Witch-List", "Rich-List", "Ritch's-List", "Which-List", "Mitch's-List"][Math.floor(Math.random() * 5)])
 
-            var list;
-            var lockout = []
+    var list;
+    var lockout = []
 
-            let players = []
+    let players = []
 
-            let turn = 0
+    let turn = 0
 
-            const connection = mysql.createConnection({
-              host: "localhost",
-              database: "Listen"
-            })
+    $(document).ready(() => {
+      swal({
+        text: 'Anzahl der Spieler:',
+        content: 'input',
+        button: {
+          text: 'Ok',
+          closeModal: false
+        }
+      }).then((result) => {
+        playerNumberQuestion(result)
+      })
+    })
 
-            connection.connect((err) => {
-              console.log(err ? err : 'Connected')
-            })
-
-            $(document).ready(() => {
-              swal({
-                text: 'Anzahl der Spieler:',
-                content: 'input',
-                button: {
-                  text: 'Ok',
-                  closeModal: false
-                }
-              }).then((result) => {
-              playerNumberQuestion(result)
-            })
-            })
-
-            const playerNumberQuestion = (result) => {
-              if(Number(result) > 0 && (((Number(result))%1)==0)) {
-              playerDialog(Number(result), Number(result))
-            } else {
-              swal({
-                title: "Fehler",
-                text: "Geben Sie eine ganze Zahl ein, die größer als 0 ist.",
-                content: 'input',
-                icon: "error",
-                button: {
-                  text: 'Ok',
-                  closeModal: true
-                }
-              }).then((result) => {
-              playerNumberQuestion(result);
-            })
-            }
-
+    const playerNumberQuestion = (result) => {
+      if (Number(result) > 0 && (((Number(result)) % 1) == 0)) {
+        playerDialog(Number(result), Number(result))
+      } else {
+        swal({
+          title: "Fehler",
+          text: "Geben Sie eine ganze Zahl ein, die größer als 0 ist.",
+          content: 'input',
+          icon: "error",
+          button: {
+            text: 'Ok',
+            closeModal: true
           }
+        }).then((result) => {
+          playerNumberQuestion(result);
+        })
+      }
 
-            $.ajax('index.json').done((json) => {
+    }
 
-              let index = JSON.parse(json)
-
-              let lists = index.lists
-              let listURL = lists[Math.floor(Math.random() * lists.length)]
-
-              //let listURL = 'Lander_die_die_Mongolei_sind'
-              //let listURL = 'Seen'
-
-              $.ajax(`lists/${listURL}.json`).done((result) => {
-                list = JSON.parse(result)
-                $('#title').html(list.name)
-                $('#note').html(list.notes)
-                if (list.items.length - lockout.length == 1){
-                $('#rest').html("Es befindet sich nur noch ein Element auf der Liste.")
-                }else{
-                $('#rest').html("Es befinden sich noch " + (list.items.length - lockout.length) + " Elemente auf der Liste.")}
-                //alert(result) //Diese Zeile ist dafür da, um beschädigte Listen durch das Zufallsprinzip zu suchen.
-              })
-            })
-
-            connection.query('SELECT * FROM Listen ORDER BY RAND() LIMIT 1', (err, result) => {
-              console.log(result)
-            })
-
-            const playerDialog = (count, absolute) => {
-              if (count == 0) {
-                let list = ''
-                var first = true
-                for (var player of players) {
-                  list += `<li id="player-${player.split(' ').join('')}" class="list-item ${first ? 'active-player' : ''}">${player}</li>`
-                  first = false;
-                }
-
-                $('#player-list').html(list)
-                return
+    const db = new sqlite3.Database('./Listen.db', (err) => {
+      db.get('SELECT * FROM Listen ORDER BY RANDOM() LIMIT 1', (err, _list) => {
+        $('#title').html(_list.display_name)
+        $('#notes').html(_list.notes)
+        db.all(`SELECT * FROM Elemente WHERE ID = ${_list.ID}`, (err, elements) => {
+          $('#rest').html("Es befinden sich noch " + (elements.length) + " Elemente auf der Liste.")
+          let obj = {
+            items: []
+          }
+          elements.forEach(async (_element) => {
+            let alts = [_element.Name]
+            await db.all(`SELECT * FROM Alternative WHERE Name = "${_element.Name}"`, (err, altss) => {
+              for (var alt of altss) {
+                alts.push(alt.Alternative)
               }
-              swal({
-                text: ("Spieler " + ((absolute + 1) - count)),
-                content: 'input',
-                button: {
-                  text: 'Ok',
-                  closeModal: count == 1 ? true : false
-                }
-              }).then((result) => {
-                players.push(result ? result : ("Spieler " + ((absolute + 1) - count)))
-                playerDialog(count - 1, absolute)
-              })
-            }
-
-            const check = () => {
-              let input = $('#text-in').val().toLowerCase().split(' ').join('')
-              $('#text-in').val('')
-              if (predicate(input, list.items)==1) {
-                  let hit = list.items[lockout[lockout.length - 1]]
-                  swal(`'${hit.name ? hit.name : (hit.names[0])}'`, 'ist auf der Liste!', 'success').then((value) => {
-                    if (lockout.length == list.items.length) {
-                      if(players.length==1){
-                        endFour()
-                      }else{
-                        endThree()
-                      }
-                    }
-                  })
-                  if (list.items.length - lockout.length == 1){
-                    $('#rest').html("Es befindet sich nur noch ein Element auf der Liste.")
-                  }else{
-                  $('#rest').html("Es befinden sich noch " + (list.items.length - lockout.length) + " Elemente auf der Liste.")}
-              } else if (predicate(input, list.items)==0){
-                  swal(`'${input}'`, 'ist nicht auf der Liste.', 'error').then(() => {
-                    $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).addClass('out')
-                    players.splice((turn + players.length - 1) % players.length , 1)
-                    turn -= 1
-                    if(players.length==1){
-                      end()
-                    }
-                    if(players.length==0){
-                      endTwo()
-                    }
-                  })
-              } else if (predicate(input, list.items)==2){
-                  swal(`'${input}'`, 'wurde bereits gennant.', 'error').then(() => {
-                    $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).addClass('out')
-                    players.splice((turn + players.length - 1) % players.length, 1)
-                    turn -= 1
-                    if(players.length==1){
-                      end()
-                    }
-                    if(players.length==0){
-                      endTwo()
-                    }
-                  })
-              }
-              if (input == "") {
-                  $('#text-out').html("")
+              if (alts.length > 1) {
+                obj.items.push({
+                  names: alts,
+                  content: Math.random().toString(36).substring(7)
+                })
               } else {
-                turn += 1
-                if (turn == players.length) {
-                  turn = 0
-                }
-                $(`#player-${players[turn].split(' ').join('')}`).toggleClass('active-player')
-                $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).toggleClass('active-player')
-              }
-            }
-
-            const giveup = () => {
-              turn++
-              $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).addClass('out')
-              players.splice((turn + players.length - 1) % players.length , 1)
-              turn -= 1
-              if(players.length==1){
-                end()
-              }
-              if(players.length==0){
-                endTwo()
-              }
-            }
-
-            const end = () => {
-              swal({
-                title: `${players[0]} hat gewonnen.`,
-                text: `Das Spiel ist vorbei. ${players[0]}, möchten Sie sehen, wie viel sie noch gewusst hätten, oder sich alle verbleibenden Elemente anzeigen lassen?`,
-                icon: "info",
-                buttons: {
-                  weiter: {
-                    text: "Weiter eingeben",
-                    value: "weiter"
-                  },
-                  anzeigen: {
-                    text: "Liste anzeigen",
-                    value: "anzeigen"
-                  }
-                }
-              }).then((value) => {
-                  switch (value) {
-
-                    case "weiter":
-                    break;
-
-                    case "anzeigen":
-                     show()
-                    break;
-                  }
+                obj.items.push({
+                  name: _element.Name,
+                  content: Math.random().toString(36).substring(7)
                 })
-            }
-            const endTwo = () => {
-              swal({
-                title: `Fast geschafft`,
-                text: ("Es befinden sich immernoch " + (list.items.length - lockout.length) + " weitere Elemente auf der Liste, doch es wurden " + lockout.length + " von " + list.items.length + " Elementen gennant."),
-                icon: "info",
-                buttons: {
-                  categories: {
-                    text: "Kategorien Anzeigen",
-                    value: "categories"
-                  },
-                  newList: {
-                    text: "Neue Liste spielen",
-                    value: "newList"
-                  },
-                  anzeigen: {
-                    text: "Liste anzeigen",
-                    value: "anzeigen"
-                  }
-                }
-              }).then((value) => {
-                  switch (value) {
-
-                    case "categories":
-                      window.location = "kategorien.html";
-                    break;
-
-                    case "newList":
-                      newList()
-                    break;
-
-                    case "anzeigen":
-                     show()
-                    break;
-                  }
-                })
-            }
-            const endThree = () => {
-              swal({
-                title: `Liste vollständig`,
-                text: ('Sie haben alle ' + list.items.length + ' Elemente der Liste gennant, es gibt keinen Gewinner. Das schreit nach einer Revanche!'),
-                icon: "info",
-                buttons: {
-                  categories: {
-                    text: "Kategorien Anzeigen",
-                    value: "categories"
-                  },
-                  newList: {
-                    text: "Neue Liste spielen",
-                    value: "newList"
-                  },
-                  anzeigen: {
-                    text: "Liste anzeigen",
-                    value: "anzeigen"
-                  }
-                }
-              }).then((value) => {
-                  switch (value) {
-
-                    case "categories":
-                      window.location = "kategorien.html";
-                    break;
-
-                    case "newList":
-                      newList()
-                    break;
-
-                    case "anzeigen":
-                     show()
-                    break;
-                  }
-                })
-            }
-            const endFour = () => {
-              swal({
-                title: `Liste vollständig`,
-                text: ('Sie sind nicht nur der Gewinner, sondern haben darüber hinaus auch noch die gesammte Liste gemeistert.'),
-                icon: "info",
-                buttons: {
-                  categories: {
-                    text: "Kategorien Anzeigen",
-                    value: "categories"
-                  },
-                  newList: {
-                    text: "Neue Liste spielen",
-                    value: "newList"
-                  },
-                  anzeigen: {
-                    text: "Liste anzeigen",
-                    value: "anzeigen"
-                  }
-                }
-              }).then((value) => {
-                  switch (value) {
-
-                    case "categories":
-                      window.location = "kategorien.html";
-                    break;
-
-                    case "newList":
-                      newList()
-                    break;
-
-                    case "anzeigen":
-                     show()
-                    break;
-                  }
-                })
-            }
-
-            $('#text-in').keyup((event) => {
-              if (event.keyCode === 13) {
-                check()
               }
             })
+          })
+          list = obj
+        })
+      })
+    });
 
-            //Zeigt die gesammte Liste an
-            const show = () => {
-              let res = ''
-              for (var item of list.items) {
-                res += `<li>${item.name ? item.name : (item.names[0])}</li>`
-              }
-              $('#liste').html(res + "<h3 style='text-align: center; margin-top: 10%; margin-bottom: 15%;' ><a href='_itch-list.html' style='border: solid 1pt; padding: 1%;'>Zufällige Liste spielen<a> <a href='kategorien.html' style='margin-left: 6%; border: solid 1pt; padding: 1%;'>Kategorien anzeigen</a></h3>")
-              $('#liste').css({'display': 'block'})
-              $('#main-container').css({'display': 'none'})
-              $('#rest').css({'display': 'none'})
+    const playerDialog = (count, absolute) => {
+      if (count == 0) {
+        let list = ''
+        var first = true
+        for (var player of players) {
+          list += `<li id="player-${player.split(' ').join('')}" class="list-item ${first ? 'active-player' : ''}">${player}</li>`
+          first = false;
+        }
 
+        $('#player-list').html(list)
+        return
+      }
+      swal({
+        text: ("Spieler " + ((absolute + 1) - count)),
+        content: 'input',
+        button: {
+          text: 'Ok',
+          closeModal: count == 1 ? true : false
+        }
+      }).then((result) => {
+        players.push(result ? result : ("Spieler " + ((absolute + 1) - count)))
+        playerDialog(count - 1, absolute)
+      })
+    }
+
+    const check = () => {
+      let input = $('#text-in').val().toLowerCase().split(' ').join('')
+      if (input == '') {return}
+      $('#text-in').val('')
+      if (predicate(input, list.items) == 1) {
+        let hit = list.items[lockout[lockout.length - 1]]
+        swal(`'${hit.name ? hit.name : (hit.names[0])}'`, 'ist auf der Liste!', 'success').then((value) => {
+          if (lockout.length == list.items.length) {
+            if (players.length == 1) {
+              endFour()
+            } else {
+              endThree()
             }
+          }
+        })
+        if (list.items.length - lockout.length == 1) {
+          $('#rest').html("Es befindet sich nur noch ein Element auf der Liste.")
+        } else {
+          $('#rest').html("Es befinden sich noch " + (list.items.length - lockout.length) + " Elemente auf der Liste.")
+        }
+      } else if (predicate(input, list.items) == 0) {
+        swal(`'${input}'`, 'ist nicht auf der Liste.', 'error').then(() => {
+          $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).addClass('out')
+          players.splice((turn + players.length - 1) % players.length, 1)
+          turn -= 1
+          if (players.length == 1) {
+            end()
+          }
+          if (players.length == 0) {
+            endTwo()
+          }
+        })
+      } else if (predicate(input, list.items) == 2) {
+        swal(`'${input}'`, 'wurde bereits gennant.', 'error').then(() => {
+          $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).addClass('out')
+          players.splice((turn + players.length - 1) % players.length, 1)
+          turn -= 1
+          if (players.length == 1) {
+            end()
+          }
+          if (players.length == 0) {
+            endTwo()
+          }
+        })
+      }
+      if (input == "") {
+        $('#text-out').html("")
+      } else {
+        turn += 1
+        if (turn == players.length) {
+          turn = 0
+        }
+        $(`#player-${players[turn].split(' ').join('')}`).toggleClass('active-player')
+        $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).toggleClass('active-player')
+      }
+    }
 
-            //Startet eine neue Runde mit einer neuen Liste
-            const newList = () => {
-              window.location.reload();
-            }
+    const giveup = () => {
+      turn++
+      $(`#player-${players[(turn + players.length - 1) % players.length].split(' ').join('')}`).addClass('out')
+      players.splice((turn + players.length - 1) % players.length, 1)
+      turn -= 1
+      if (players.length == 1) {
+        end()
+      }
+      if (players.length == 0) {
+        endTwo()
+      }
+    }
 
-            const predicate = (item, list) => {
-              var result = 0
+    const end = () => {
+      swal({
+        title: `${players[0]} hat gewonnen.`,
+        text: `Das Spiel ist vorbei. ${players[0]}, möchten Sie sehen, wie viel sie noch gewusst hätten, oder sich alle verbleibenden Elemente anzeigen lassen?`,
+        icon: "info",
+        buttons: {
+          weiter: {
+            text: "Weiter eingeben",
+            value: "weiter"
+          },
+          anzeigen: {
+            text: "Liste anzeigen",
+            value: "anzeigen"
+          }
+        }
+      }).then((value) => {
+        switch (value) {
 
-              for (var e of list) {
-                if (((e.name ? e.name : "").toLowerCase().split(' ').join('') == item || (e.names ? e.names : []).map(i => i.toLowerCase().split(' ').join('')).includes(item)) && lockout.includes(list.indexOf(e))) {
-                  result = 2
-                } else if (((e.name ? e.name : "").toLowerCase().split(' ').join('') == item || (e.names ? e.names : []).map(i => i.toLowerCase().split(' ').join('')).includes(item))) {
-                  result = 1
-                  lockout.push(list.indexOf(e))
-                }
-              }
-              return result;
-            }
-        </script>
-    </body>
+          case "weiter":
+            break;
+
+          case "anzeigen":
+            show()
+            break;
+        }
+      })
+    }
+    const endTwo = () => {
+      swal({
+        title: `Fast geschafft`,
+        text: ("Es befinden sich immernoch " + (list.items.length - lockout.length) + " weitere Elemente auf der Liste, doch es wurden " + lockout.length + " von " + list.items.length + " Elementen gennant."),
+        icon: "info",
+        buttons: {
+          categories: {
+            text: "Kategorien Anzeigen",
+            value: "categories"
+          },
+          newList: {
+            text: "Neue Liste spielen",
+            value: "newList"
+          },
+          anzeigen: {
+            text: "Liste anzeigen",
+            value: "anzeigen"
+          }
+        }
+      }).then((value) => {
+        switch (value) {
+
+          case "categories":
+            window.location = "kategorien.html";
+            break;
+
+          case "newList":
+            newList()
+            break;
+
+          case "anzeigen":
+            show()
+            break;
+        }
+      })
+    }
+    const endThree = () => {
+      swal({
+        title: `Liste vollständig`,
+        text: ('Sie haben alle ' + list.items.length + ' Elemente der Liste gennant, es gibt keinen Gewinner. Das schreit nach einer Revanche!'),
+        icon: "info",
+        buttons: {
+          categories: {
+            text: "Kategorien Anzeigen",
+            value: "categories"
+          },
+          newList: {
+            text: "Neue Liste spielen",
+            value: "newList"
+          },
+          anzeigen: {
+            text: "Liste anzeigen",
+            value: "anzeigen"
+          }
+        }
+      }).then((value) => {
+        switch (value) {
+
+          case "categories":
+            window.location = "kategorien.html";
+            break;
+
+          case "newList":
+            newList()
+            break;
+
+          case "anzeigen":
+            show()
+            break;
+        }
+      })
+    }
+    const endFour = () => {
+      swal({
+        title: `Liste vollständig`,
+        text: ('Sie sind nicht nur der Gewinner, sondern haben darüber hinaus auch noch die gesammte Liste gemeistert.'),
+        icon: "info",
+        buttons: {
+          categories: {
+            text: "Kategorien Anzeigen",
+            value: "categories"
+          },
+          newList: {
+            text: "Neue Liste spielen",
+            value: "newList"
+          },
+          anzeigen: {
+            text: "Liste anzeigen",
+            value: "anzeigen"
+          }
+        }
+      }).then((value) => {
+        switch (value) {
+
+          case "categories":
+            window.location = "kategorien.html";
+            break;
+
+          case "newList":
+            newList()
+            break;
+
+          case "anzeigen":
+            show()
+            break;
+        }
+      })
+    }
+
+    $('#text-in').keyup((event) => {
+      if (event.keyCode === 13) {
+        check()
+      }
+    })
+
+    //Zeigt die gesammte Liste an
+    const show = () => {
+      let res = ''
+      for (var item of list.items) {
+        res += `<li>${item.name ? item.name : (item.names[0])}</li>`
+      }
+      $('#liste').html(res + "<h3 style='text-align: center; margin-top: 10%; margin-bottom: 15%;' ><a href='_itch-list.html' style='border: solid 1pt; padding: 1%;'>Zufällige Liste spielen<a> <a href='kategorien.html' style='margin-left: 6%; border: solid 1pt; padding: 1%;'>Kategorien anzeigen</a></h3>")
+      $('#liste').css({ 'display': 'block' })
+      $('#main-container').css({ 'display': 'none' })
+      $('#rest').css({ 'display': 'none' })
+
+    }
+
+    //Startet eine neue Runde mit einer neuen Liste
+    const newList = () => {
+      window.location.reload();
+    }
+
+    const predicate = (item, list) => {
+      var result = 0
+
+      for (var e of list) {
+        if (((e.name ? e.name : "").toLowerCase().split(' ').join('') == item || (e.names ? e.names : []).map(i => i.toLowerCase().split(' ').join('')).includes(item)) && lockout.includes(list.indexOf(e))) {
+          result = 2
+        } else if (((e.name ? e.name : "").toLowerCase().split(' ').join('') == item || (e.names ? e.names : []).map(i => i.toLowerCase().split(' ').join('')).includes(item))) {
+          result = 1
+          lockout.push(list.indexOf(e))
+        }
+      }
+      return result;
+    }
+  </script>
+</body>
+
 </html>
