@@ -101,6 +101,14 @@
         let obj = {
           items: []
         }
+        db.all(`SELECT Subjekt FROM Sub_List WHERE ID = ${_list.ID}`, (err, result) => {
+          console.log(result)
+          let subs = []
+          result.forEach((subject) => {
+            subs.push(subject.Subjekt)
+          })
+          obj.subjects = subs
+        })
         elements.forEach(async (_element) => {
           let alts = [_element.Name]
           await db.all(`SELECT * FROM Alternative WHERE Name = "${_element.Name}"`, (err, altss) => {
@@ -131,21 +139,22 @@
       var first = true
       const spielerDB = new sqlite3.Database('./spieler.db', (err) => {
         players.forEach(async (player) => {
-          list += `<li id="player-${player.split(' ').join('')}" class="list-item ${first ? 'active-player' : ''}">${player}</li>`
+          list += `<li id="player-${player.split(' ').join('')}" class="list-item ${first ? 'active-player' : ''}" onclick="displayStatCard(this.id)">${player}</li>`
           first = false;
 
-          console.log(player)
           await spielerDB.get(`SELECT * FROM Spieler WHERE Name = "${player}"`, (err, result) => {
             if (!result) {
-              spielerDB.run(`INSERT INTO Spieler (Name, Spiele, Siege, Erstes_Spiel, Abgeschlossene_Listen) VALUES (${player}, 0, 0, ${new Date().getDate()}, 0)`)
+              spielerDB.run(`INSERT INTO Spieler (Name, Spiele, Siege, Erstes_Spiel, Abgeschlossene_Listen) VALUES ("${player}", 0, 0, "${formattedDate()}", 0)`)
             }
           })
 
+          await spielerDB.run(`UPDATE Spieler SET Spiele = Spiele + 1 WHERE Name = "${player}"`)
         })
         $('#player-list').html(list)
       })
       return
     }
+
     swal({
       text: ("Spieler " + ((absolute + 1) - count)),
       content: 'input',
@@ -255,6 +264,14 @@
         break;
       }
     })
+    
+    const spielerDB = new sqlite3.Database('./spieler.db', (err) => {
+      spielerDB.run(`UPDATE Spieler SET Siege = Siege + 1 WHERE Name = "${players[0]}"`)
+      list.subjects.forEach(async (subject) => {
+        await spielerDB.run(`INSERT OR REPLACE INTO gewinnt (Zahl, subject_name, spieler_name) VALUES (COALESCE((SELECT Zahl FROM gewinnt WHERE spieler_name = "${players[0]}" AND subject_name = "${subject}"), 0) + 1, "${subject}", "${players[0]}")`)
+      })   
+    })
+
   }
   const endTwo = () => {
     swal({
@@ -291,6 +308,7 @@
         break;
       }
     })
+    console.log(players)
   }
   const endThree = () => {
     swal({
@@ -327,6 +345,7 @@
         break;
       }
     })
+    console.log(players)
   }
   const endFour = () => {
     swal({
@@ -348,6 +367,11 @@
         }
       }
     }).then((value) => {
+
+      const spielerDB = new sqlite3.Database('./spieler.db', (err) => {
+        spielerDB.run(`UPDATE Spieler SET Abgeschlossene_Listen = Abgeschlossene_Listen + 1 WHERE Name = ${players[0]}`)
+      })
+
       switch (value) {
 
         case "categories":
@@ -363,6 +387,7 @@
         break;
       }
     })
+    console.log(players)
   }
 
   $('#text-in').keyup((event) => {
@@ -401,6 +426,31 @@
       }
     }
     return result;
+  }
+
+  const formattedDate = () => {
+    let date = new Date()
+    return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`
+  }
+
+  const displayStatCard = (id) => {
+    let player = id.split('-')[1]
+    const spielerDB = new sqlite3.Database('./spieler.db', (err) => {
+      spielerDB.get(`SELECT * FROM Spieler WHERE Name = "${player}"`, (err, result) => {
+        let table = `<h1>${result.Name}</h1><ul><li>Anzahl Spiele: ${result.Spiele}</li><li>Anzahl Siege: ${result.Siege}</li><li>Erstes Spiel: ${result.Erstes_Spiel}</li><li>Anzahl Abgeschlossener Listen: ${result.Abgeschlossene_Listen}</li></ul><table><tr><th>Thema<th><th>Siege</th></tr>`
+        spielerDB.all(`SELECT Subjects.display_name, gewinnt.Zahl FROM gewinnt, Subjects WHERE gewinnt.subject_name = Subjects.name AND gewinnt.spieler_name = "${player}"`, (err, data) => {
+          data.forEach((entry) => {
+            table += `<tr><td>${entry.display_name}</td><td>${entry.Zahl}</td></tr>`
+          })
+          table += "</table>"
+        let template = document.createElement('div')
+        template.innerHTML = table
+        swal({
+          content: template
+        })
+        })
+      })
+    })
   }
   </script>
 </body>
