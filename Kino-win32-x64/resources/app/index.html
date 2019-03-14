@@ -1,0 +1,93 @@
+<html>
+
+<head>
+  <title>Kino</title>
+  <meta charset="utf-8">
+</head>
+
+<body style="font-family:sans-serif">
+  <div>
+    <input type="text" id="titel">
+    <select id="typen">
+      <option></option>
+    </select>
+    <select id="genres">
+      <option></option>
+    </select>
+    <select id="schauspieler">
+      <option></option>
+    </select>
+    <input type="button" onclick="suchen()" value="Suchen">
+  </div>
+  <br>
+  <table id="tabelle" style="border: 1px solid black;width: 100%">
+    <tr><th>Titel</th><th>Typ</th><th>Genre</th><th>Besetzung</th></tr>
+  </table>
+</body>
+
+<script>
+  const sqlite3 = require('sqlite3')
+
+  var datenbank = new sqlite3.Database('./KinoDB.db', function(fehler) {
+    datenbank.all('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID GROUP BY Film.Titel', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var zeile = document.createElement('tr')
+        zeile.innerHTML = '<td>' + daten[i].Titel + '</td><td>' + daten[i].Typ + '</td><td>' + daten[i].Name + '</td><td>' + daten[i].Besetzung + '</td>'
+        document.getElementById('tabelle').appendChild(zeile)
+      }
+    })
+    datenbank.all('SELECT Name, ID FROM Genre', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var option = document.createElement('option')
+        option.innerHTML = daten[i].Name
+        option.id = daten[i].ID
+        document.getElementById('genres').appendChild(option)
+      }
+    })
+    datenbank.all('SELECT Typ FROM Film GROUP BY Typ', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var option = document.createElement('option')
+        option.innerHTML = daten[i].Typ
+        option.id = daten[i].Typ
+        document.getElementById('typen').appendChild(option)
+      }
+    })
+    datenbank.all('SELECT Name, ID FROM Schauspieler GROUP BY Name', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var option = document.createElement('option')
+        option.innerHTML = daten[i].Name
+        option.id = daten[i].ID
+        document.getElementById('schauspieler').appendChild(option)
+      }
+    })
+  })
+
+  function tabelle(abfrage) {
+    document.getElementById('tabelle').innerHTML = "<tr><th>Titel</th><th>Typ</th><th>Genre</th><th>Besetzung</th></tr>"
+    var db = new sqlite3.Database('./KinoDB.db', function(fehler) {
+    datenbank.all(abfrage, function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var zeile = document.createElement('tr')
+        zeile.innerHTML = '<td>' + daten[i].Titel + '</td><td>' + daten[i].Typ + '</td><td>' + daten[i].Name + '</td><td>' + daten[i].Besetzung + '</td>'
+        document.getElementById('tabelle').appendChild(zeile)
+      }
+    })
+    })
+  }
+
+  function suchen() {
+      if (document.getElementById('titel').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Film.Titel LIKE "%' + document.getElementById('titel').value + '%" GROUP BY Film.Titel')
+      } else if (document.getElementById('typen').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Film.Typ = "' + document.getElementById('typen').value + '" GROUP BY Film.Titel')
+      } else if (document.getElementById('genres').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Genre.Name = "' + document.getElementById('genres').value + '" GROUP BY Film.Titel')
+      } else if (document.getElementById('schauspieler').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Schauspieler.Name = "' + document.getElementById('schauspieler').value + '" GROUP BY Film.Titel')
+      } else {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID GROUP BY Film.Titel')
+      }
+  }
+</script>
+
+</html>

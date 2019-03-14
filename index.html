@@ -1,55 +1,93 @@
 <html>
 
 <head>
-  <title>_itch-List Home</title>
-  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <title>Kino</title>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
-  <h1 id="name">-List </h1>
-  <p id="untertitel">Created by Marlon Zewen & Moritz Reinhold</h1>
-    <div id="main">
-      <h3 id="listcount" style="text-align: center; margin-top: 15%; margin-bottom: 10%; font-size: 18pt;"></h3>
-      <h3 style="text-align: center; margin-top: 10%; margin-bottom: 15%;"><a href="_itch-list.html"
-          style="border: solid 1pt; padding: 1%;">Zufällige Liste spielen<a> <a href="kategorien.html"
-              style="margin-left: 6%; border: solid 1pt; padding: 1%;">Kategorien anzeigen</a></h3>
-      <h2>Was ist das?</h2>
-      <h3 id="infotext">Richlist ist ein Quizspiel. Das Spiel gibt eine Liste vor, zum Beispiel die „Liste der Deutschen
-        Bundesländer“, und alle Mitspieler müssen nacheinander Einträge auf dieser Liste nennen. Spieler 1 ist als
-        erster am Zug und er gibt „Bayern“ ein. Da dies korrekt ist, ist der nächste Spieler dran. Spieler 2 gibt „NRW“
-        ein. Das ist ebenfalls korrekt. Er hätte auch Nordrheinwestphalen eingeben können, das Programme hätte beide
-        Schreibweisen akzeptiert. Nun ist Spieler 3 an der Reihe. Er ist nicht der hellste, wählt aber seit Jahren die
-        NPD und gibt deswegen „Ostpreußen“ ein. Damit ist er raus. Spieler 4 hat nicht richtig aufgepasst. Als er
-        „Nordrheinwestphalen“ eingibt, sagt das Programm ihm, dass er ebenfalls raus ist, da NRW bereits gennant wurde.
-        Jetzt ist wieder Spieler 1 am Zug. Er nennt Hessen, daraufhin Spieler 2 Berlin, er Brandburg und Spieler 2
-        Hamburg. Als Spieler 1 jetzt wieder am Zug ist, fällt ihm kein Bundesland mehr ein. Er klickt auf die
-        „Aufegeben“ Schaltfläche und gibt das Spiel verloren. Spieler 2 hat gewonnen. Spieler 2 nennt nun zum Spaß noch
-        die verbliebenen Bundesländer, um sich zu Beweisen, dass er in SoWi immer gut aufgepasst hat.
-        </br>
-        Die Listen sind in verschiedenen Themenbereiche eingeteilt. In der <a href="kategorien.html"> Übersicht der
-          Themenbereiche </a> können zufällige Listen aus einer Kategorien gespielt werden, oder alle Listen einer
-        Kategorie angezeigt und manuell ausgewählt werden.
-      </h3>
-    </div>
-    <h3><a href="Impressum.html">Impressum &amp; FAQ</a></h3>
+<body style="font-family:sans-serif">
+  <div>
+    <input type="text" id="titel">
+    <select id="typen">
+      <option></option>
+    </select>
+    <select id="genres">
+      <option></option>
+    </select>
+    <select id="schauspieler">
+      <option></option>
+    </select>
+    <input type="button" onclick="suchen()" value="Suchen">
+  </div>
+  <br>
+  <table id="tabelle" style="border: 1px solid black;width: 100%">
+    <tr><th>Titel</th><th>Typ</th><th>Genre</th><th>Besetzung</th></tr>
+  </table>
 </body>
 
 <script>
-  window.$ = require('./jquery.js')
-  const renderer = require('./renderer.js')
   const sqlite3 = require('sqlite3')
 
-  $('#name').html(["Witch-List", "Rich-List", "Ritch's-List", "Which-List", "Mitch's-List"][Math.floor(Math.random() * 5)])
-
-  const db = new sqlite3.Database('./Listen.db', (err) => {
-    db.get('SELECT COUNT(*) AS count FROM Listen', (err, count) => {
-      $('#listcount').html(["Witch-List", "Rich-List", "Ritch's-List", "Which-List", "Mitch's-List"][Math.floor(Math.random() * 5)] + " umfasst aktuell <span style='color: #42a7f4'>" + count.count + '</span> Listen.')
+  var datenbank = new sqlite3.Database('./KinoDB.db', function(fehler) {
+    datenbank.all('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID GROUP BY Film.Titel', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var zeile = document.createElement('tr')
+        zeile.innerHTML = '<td>' + daten[i].Titel + '</td><td>' + daten[i].Typ + '</td><td>' + daten[i].Name + '</td><td>' + daten[i].Besetzung + '</td>'
+        document.getElementById('tabelle').appendChild(zeile)
+      }
+    })
+    datenbank.all('SELECT Name, ID FROM Genre', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var option = document.createElement('option')
+        option.innerHTML = daten[i].Name
+        option.id = daten[i].ID
+        document.getElementById('genres').appendChild(option)
+      }
+    })
+    datenbank.all('SELECT Typ FROM Film GROUP BY Typ', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var option = document.createElement('option')
+        option.innerHTML = daten[i].Typ
+        option.id = daten[i].Typ
+        document.getElementById('typen').appendChild(option)
+      }
+    })
+    datenbank.all('SELECT Name, ID FROM Schauspieler GROUP BY Name', function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var option = document.createElement('option')
+        option.innerHTML = daten[i].Name
+        option.id = daten[i].ID
+        document.getElementById('schauspieler').appendChild(option)
+      }
     })
   })
 
+  function tabelle(abfrage) {
+    document.getElementById('tabelle').innerHTML = "<tr><th>Titel</th><th>Typ</th><th>Genre</th><th>Besetzung</th></tr>"
+    var db = new sqlite3.Database('./KinoDB.db', function(fehler) {
+    datenbank.all(abfrage, function(fehler, daten) {
+      for (var i = 0; i < daten.length; i++) {
+        var zeile = document.createElement('tr')
+        zeile.innerHTML = '<td>' + daten[i].Titel + '</td><td>' + daten[i].Typ + '</td><td>' + daten[i].Name + '</td><td>' + daten[i].Besetzung + '</td>'
+        document.getElementById('tabelle').appendChild(zeile)
+      }
+    })
+    })
+  }
 
+  function suchen() {
+      if (document.getElementById('titel').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Film.Titel LIKE "%' + document.getElementById('titel').value + '%" GROUP BY Film.Titel')
+      } else if (document.getElementById('typen').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Film.Typ = "' + document.getElementById('typen').value + '" GROUP BY Film.Titel')
+      } else if (document.getElementById('genres').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Genre.Name = "' + document.getElementById('genres').value + '" GROUP BY Film.Titel')
+      } else if (document.getElementById('schauspieler').value != "") {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID AND Schauspieler.Name = "' + document.getElementById('schauspieler').value + '" GROUP BY Film.Titel')
+      } else {
+        tabelle('SELECT Film.Titel, Film.Typ, Genre.Name, group_concat(Schauspieler.Name, ", ") as Besetzung FROM Film, Genre, spieltMit, Schauspieler WHERE Film.Genre_ID = Genre.ID AND spieltMit.Film_ID = Film.ID AND spieltMit.Schauspieler_ID = Schauspieler.ID GROUP BY Film.Titel')
+      }
+  }
 </script>
 
 </html>
